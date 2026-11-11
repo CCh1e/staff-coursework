@@ -1,0 +1,36 @@
+@startuml er-diagram
+!pragma layout smetana
+skinparam dpi 150
+skinparam defaultFontName "Times New Roman"
+skinparam defaultFontSize 13
+skinparam linetype ortho
+hide circle
+skinparam class {
+  BackgroundColor white
+  BorderColor black
+  ArrowColor black
+}
+
+entity "departments\n(підрозділи)" as departments {
+  * id : SERIAL <<PK>>
+  --
+  * name : VARCHAR(100) <<UNIQUE>>
+  location : VARCHAR(100)
+  phone : VARCHAR(20)
+}
+
+entity "employees\n(працівники)" as employees {
+  * id : SERIAL <<PK>>
+  --
+  * last_name : VARCHAR(50)
+  * first_name : VARCHAR(50)
+  middle_name : VARCHAR(50)
+  * position : VARCHAR(100)
+  * salary : NUMERIC(12,2) <<CHECK ≥ 0>>
+  * hire_date : DATE
+  email : VARCHAR(100) <<UNIQUE>>
+  * department_id : INTEGER <<FK>>
+}
+
+departments ||--o{ employees : "1 : N\nмістить"
+@enduml

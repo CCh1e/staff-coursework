@@ -1,0 +1,198 @@
+@startuml class-diagram
+!pragma layout smetana
+skinparam dpi 130
+skinparam defaultFontName "Arial"
+skinparam defaultFontSize 11
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam class {
+  BackgroundColor white
+  BorderColor black
+  ArrowColor black
+}
+hide empty members
+
+package "ui" {
+  class StaffApp {
+    + start(stage : Stage)
+    - showLogin()
+    - showMain(context : AppContext)
+  }
+  class LoginView {
+    - connect()
+    - readSettings() : ConnectionSettings
+  }
+  class MainView {
+    + refreshAll()
+    - exportJson()
+    - importJson()
+  }
+  class DepartmentsTab {
+    + refresh()
+    - transferEmployees()
+  }
+  class EmployeesTab {
+    + refresh()
+    - applyFilter()
+  }
+  class SalaryFundTab {
+    + refresh()
+  }
+  class DepartmentDialog
+  class EmployeeDialog
+  class Alerts <<utility>>
+}
+
+class AppContext {
+  + departments() : DepartmentService
+  + employees() : EmployeeService
+  + jsonExchange() : JsonExchangeService
+}
+
+package "service" {
+  class DepartmentService {
+    + getStatistics(order : SortOrder) : List<DepartmentStats>
+    + add(d : Department) : Department
+    + update(d : Department)
+    + delete(id : int)
+    + transferAllEmployees(fromId : int, toId : int) : int
+    + getSalaryFundReport() : SalaryFundReport
+  }
+  class EmployeeService {
+    + getAll() : List<Employee>
+    + getByDepartment(id : int) : List<Employee>
+    + add(e : Employee) : Employee
+    + update(e : Employee)
+    + delete(id : int)
+  }
+  class JsonExchangeService {
+    + exportTo(file : Path) : int
+    + importFrom(file : Path) : ImportResult
+  }
+  class Validator <<utility>> {
+    + {static} validate(d : Department)
+    + {static} validate(e : Employee)
+    + {static} parseSalary(text : String) : BigDecimal
+  }
+}
+
+package "dao" {
+  interface DepartmentDao {
+    + findAll(c) : List<Department>
+    + findById(c, id) : Optional<Department>
+    + findByName(c, name) : Optional<Department>
+    + insert(c, d) : int
+    + update(c, d) : boolean
+    + delete(c, id) : boolean
+    + findAllWithEmployeeCount(c, order) : List<DepartmentStats>
+    + findSalaryFunds(c) : List<DepartmentFund>
+  }
+  interface EmployeeDao {
+    + findAll(c) : List<Employee>
+    + findByDepartment(c, id) : List<Employee>
+    + findByEmail(c, email) : Optional<Employee>
+    + countByDepartment(c, id) : int
+    + insert(c, e) : int
+    + update(c, e) : boolean
+    + delete(c, id) : boolean
+    + moveAllToDepartment(c, from, to) : int
+  }
+  class JdbcDepartmentDao
+  class JdbcEmployeeDao
+}
+
+package "db" {
+  class Database {
+    + openConnection() : Connection
+    + checkConnection()
+    + withConnection(work : SqlFunction<T>) : T
+    + inTransaction(work : SqlFunction<T>) : T
+  }
+  class ConnectionSettings <<record>> {
+    host : String
+    port : int
+    database : String
+    user : String
+    password : String
+  }
+  class SqlErrors <<utility>> {
+    + {static} translate(e : SQLException) : DataAccessException
+  }
+}
+
+package "model" {
+  class Department {
+    - id : int
+    - name : String
+    - location : String
+    - phone : String
+  }
+  class Employee {
+    - id : int
+    - lastName : String
+    - firstName : String
+    - middleName : String
+    - position : String
+    - salary : BigDecimal
+    - hireDate : LocalDate
+    - email : String
+    - departmentId : int
+    + getFullName() : String
+  }
+  class DepartmentStats <<record>> {
+    department : Department
+    employeeCount : int
+  }
+  class SalaryFundReport <<record>> {
+    entries : List<Entry>
+    total : BigDecimal
+  }
+  enum SortOrder {
+    ASC
+    DESC
+  }
+}
+
+package "exception" {
+  class AppException
+  class ValidationException
+  class DataAccessException
+}
+
+StaffApp --> LoginView
+StaffApp --> MainView
+MainView *-- DepartmentsTab
+MainView *-- EmployeesTab
+MainView *-- SalaryFundTab
+DepartmentsTab ..> DepartmentDialog
+DepartmentsTab ..> EmployeeDialog
+EmployeesTab ..> EmployeeDialog
+MainView --> AppContext
+
+AppContext *-- DepartmentService
+AppContext *-- EmployeeService
+AppContext *-- JsonExchangeService
+AppContext o-- Database
+
+DepartmentService --> DepartmentDao
+DepartmentService --> EmployeeDao
+EmployeeService --> EmployeeDao
+JsonExchangeService --> DepartmentDao
+JsonExchangeService --> EmployeeDao
+DepartmentService --> Database
+DepartmentService ..> Validator
+EmployeeService ..> Validator
+
+DepartmentDao <|.. JdbcDepartmentDao
+EmployeeDao <|.. JdbcEmployeeDao
+Database --> ConnectionSettings
+Database ..> SqlErrors
+
+JdbcDepartmentDao ..> Department
+JdbcEmployeeDao ..> Employee
+DepartmentStats o-- Department
+
+AppException <|-- ValidationException
+AppException <|-- DataAccessException
+@enduml
